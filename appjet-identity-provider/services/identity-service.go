@@ -12,6 +12,7 @@ import (
 	"runtime"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
@@ -24,6 +25,12 @@ type User struct {
 	Username string `db:"username"`
 	Email    string `db:"email"`
 	Password string `db:"password"`
+}
+
+type Token struct {
+	UserID  uint   // Foreign key referencing users(id)
+	Token   string `json:"token"`
+	Expired bool   `json:"expired"`
 }
 
 // Config represents the configuration structure.
@@ -123,5 +130,22 @@ func LoginHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Login successful"})
+	token := uuid.New()
+
+	// Insert the new token into the user_token table
+	// Insert the new token into the user_token table using NamedExec
+	_, err = db.NamedExec(`
+		INSERT INTO user_token (user_id, token, expired) VALUES (:user_id, :token, :expired)
+	`, map[string]interface{}{
+		"user_id": user.ID,
+		"token":   token.String(),
+		"expired": false,
+	})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ACCESS_TOKEN": token.String()})
 }

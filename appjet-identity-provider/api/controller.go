@@ -8,7 +8,7 @@ import (
 )
 
 func verifyIfIsAlreadyLoggedIn(token string) bool {
-	return true;
+	return true
 }
 
 func LoginHandler(c *gin.Context) {
