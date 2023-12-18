@@ -1,4 +1,0 @@
-{
-    "DBDriver": "postgres",
-    "DBConnectionString": "user=postgres password=admin dbname=appjet-center host=localhost port=5432 sslmode=disable"
-}
