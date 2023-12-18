@@ -23,6 +23,8 @@ func main() {
 		apiGroup.GET("/logout", api.LogoutHandler)
 		//create user
 		apiGroup.POST("/signup", api.SignupHandler)
+		// Generic handler for other endpoints
+		apiGroup.Use(api.GenericHandler)
 	}
 
 	// Run the server
