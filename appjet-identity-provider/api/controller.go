@@ -7,10 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func verifyIfIsAlreadyLoggedIn(token string) bool {
-	return true
-}
-
 func LoginHandler(c *gin.Context) {
 
 	services.LoginHandler(c)
@@ -18,22 +14,25 @@ func LoginHandler(c *gin.Context) {
 
 func SignupHandler(c *gin.Context) {
 
+	token := c.GetHeader("Authorization")
+
+	if services.CheckIfTokenValid(token) == false {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token Invalid"})
+		return
+	}
+
 	services.CreateUserHandler(c)
 
 }
 
-func LoadLoginStateHandler(c *gin.Context) {
-	// Implement your logic to check the login state
-	// ...
+func LogoutHandler(c *gin.Context) {
 
-	// Return success or failure response
-	c.JSON(http.StatusUnauthorized, gin.H{"message": "Login state retrieved"})
-}
+	token := c.GetHeader("Authorization")
 
-func DeleteLoginStateHandler(c *gin.Context) {
-	// Implement your logic to delete the login state
-	// ...
+	if services.CheckIfTokenValid(token) == false {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token Invalid"})
+		return
+	}
 
-	// Return success or failure response
-	c.JSON(http.StatusOK, gin.H{"message": "Login state deleted"})
+	services.LogoutHandler(c)
 }

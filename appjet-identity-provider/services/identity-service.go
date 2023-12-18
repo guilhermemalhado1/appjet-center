@@ -88,6 +88,7 @@ func InitDB() {
 }
 
 func CreateUserHandler(c *gin.Context) {
+
 	var user User
 
 	if err := c.ShouldBindJSON(&user); err != nil {
@@ -148,4 +149,55 @@ func LoginHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"ACCESS_TOKEN": token.String()})
+}
+
+func CheckIfTokenValid(token string) bool {
+	var count int
+
+	// Query the database for the count of rows
+	err := db.Get(&count, `
+		SELECT COUNT(*) FROM user_token WHERE token = $1
+	`, token)
+
+	if err != nil {
+		return false
+	}
+
+	// Check if exactly 1 row is returned
+	if count != 1 {
+		return false
+	}
+
+	return true
+}
+
+func LogoutHandler(c *gin.Context) {
+	// Retrieve the token from the request header
+	token := c.GetHeader("Authorization")
+
+	// Check if the token is empty
+	if token == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Token not provided"})
+		return
+	}
+
+	// Delete the row from the user_token table where the token matches
+	result, err := db.Exec(`
+		DELETE FROM user_token WHERE token = $1
+	`, token)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to logout"})
+		return
+	}
+
+	// Check if the row was deleted
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Token not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Logout successful"})
+	return
 }

@@ -17,9 +17,11 @@ func main() {
 	// Define API routes
 	apiGroup := r.Group("/api")
 	{
+		//do login
 		apiGroup.POST("/login", api.LoginHandler)
-		apiGroup.GET("/login", api.LoadLoginStateHandler)
-		apiGroup.GET("/logout", api.DeleteLoginStateHandler)
+		//do logout
+		apiGroup.GET("/logout", api.LogoutHandler)
+		//create user
 		apiGroup.POST("/signup", api.SignupHandler)
 	}
 
