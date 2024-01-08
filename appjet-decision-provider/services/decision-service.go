@@ -28,6 +28,43 @@ type User struct {
 	Password string `db:"password"`
 }
 
+type AppjetConfiguration struct {
+	ID       int    `db:"id"`
+	UserID   int    `db:"user_id"` // You may need to adjust the data type based on your requirements
+	Config   string `db:"config"`
+}
+
+type AppjetConfigurationDto struct {
+	AppJetURL string `json:"appJetURL"`
+	Plugins   struct {
+		Git struct {
+			Enabled      bool   `json:"enabled"`
+			RepoURL      string `json:"repo-url"`
+			RepoUser     string `json:"repo-user"`
+			RepoPassword string `json:"repo-password"`
+		} `json:"git"`
+	} `json:"plugins"`
+	Cluster struct {
+		Name    string `json:"name"`
+		Servers []struct {
+			Name      string `json:"name"`
+			IPAddress string `json:"ip-address"`
+			Port      int    `json:"port"`
+			User      string `json:"user"`
+			Password  string `json:"password"`
+		} `json:"servers"`
+	} `json:"cluster"`
+	Artifact struct {
+		Language struct {
+			Name      string `json:"name"`
+			Version   string `json:"version"`
+			Framework struct {
+				Name string `json:"name"`
+			} `json:"framework"`
+		} `json:"language"`
+	} `json:"artifact"`
+}
+
 type Token struct {
 	UserID  uint   // Foreign key referencing users(id)
 	Token   string `json:"token"`
@@ -179,8 +216,7 @@ func GenericHandler(c *gin.Context) {
 
 	switch endpointRequested {
 	case "start":
-		c.JSON(http.StatusAccepted, gin.H{"message": "IN PROGRESS"})
-		return
+		StartHandler(c)
 	case "ls":
 		c.JSON(http.StatusAccepted, gin.H{"message": "IN PROGRESS"})
 		return
@@ -202,7 +238,6 @@ func GenericHandler(c *gin.Context) {
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Operation not suported"})
 		return
-
 	}
 }
 
@@ -236,3 +271,59 @@ func LogoutHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Logout successful"})
 	return
 }
+
+func StartHandler(c *gin.Context) {
+	var startRequest AppjetConfigurationDto
+
+	if err := c.ShouldBindJSON(&startRequest); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	fmt.Printf("Received Start Request:\n%+v\n", startRequest)
+
+	// Retrieve the token from the request header
+	token := c.GetHeader("Authorization")
+
+	// Check if the token is empty
+	if token == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Token not provided"})
+		return
+	}
+
+	// Query the database to get the user ID based on the token
+	var userID int
+	err := db.Get(&userID, `
+		SELECT user_id FROM user_token WHERE token = $1
+	`, token)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user ID from token"})
+		return
+	}
+
+	// Convert startRequest to JSON string
+	configJSON, err := json.Marshal(startRequest)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process start request"})
+		return
+	}
+
+	// Insert data into the database
+	_, err = db.NamedExec(`
+		INSERT INTO appjet_configurations (user_id, config) VALUES (:user_id, :config)
+	`, map[string]interface{}{
+		"user_id": userID,
+		"config":  string(configJSON),
+	})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to insert start request into the database"})
+		return
+	}
+
+	// Respond with the full JSON
+	c.JSON(http.StatusOK, gin.H{"message": "Start request processed successfully", "config": startRequest})
+}
+
+

@@ -14,19 +14,13 @@ func main() {
 	services.LoadConfig()
 	services.InitDB()
 
-	// Define API routes
 	apiGroup := r.Group("/api")
 	{
-		//do login
 		apiGroup.POST("/login", api.LoginHandler)
-		//do logout
 		apiGroup.GET("/logout", api.LogoutHandler)
-		//create user
 		apiGroup.POST("/signup", api.SignupHandler)
-		// Generic handler for other endpoints
 		apiGroup.Any("/:path", api.GenericHandler)
 	}
 
-	// Run the server
 	r.Run(":8080")
 }
